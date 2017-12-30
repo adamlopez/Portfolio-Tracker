@@ -1,5 +1,33 @@
-import requests as req, time, datetime, pandas as pd, numpy as np, csv, urllib3
+import requests as req
+import time
+import datetime
+import pandas as pd
+import numpy as np
+import csv
+import urllib3
 from datetime import date, timedelta
+import zipfile
+import io
+
+def unzipURL(url):
+    '''unzips file found at url, returning an infolist object of the files extracted.'''
+
+    try:
+        r = req.get(str(url))
+    except:
+        return "error retrieving data from url provided."
+
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    return z.namelist()
+
+
+
+def getForexTable(url,position=0, index='Date'):
+    info = unzipURL(url)
+    # print(info)
+    forexdf =  pd.read_csv(info[position], index_col=index)
+    return forexdf
+
 
 def get_cad_forex( foreignCurrency, start_date, end_date, CADbase=True):
     '''returns timeseries of daily exchange rates for any currency against the CAD. (source: Bank of Canada)'''
@@ -27,8 +55,10 @@ def get_cad_forex( foreignCurrency, start_date, end_date, CADbase=True):
 
     return df
 
-def main():
-    print(get_cad_forex('USD',date.today()-timedelta(weeks=52) ,date.today()))
-
 if __name__ == '__main__':
-    main()
+    ECBURL = r"https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?82a3f6f1218fcfac4242624c0b826f50"
+
+    df = getForexTable(ECBURL)
+    print(df)
+    quit()
+    print(get_cad_forex('USD',date.today()-timedelta(weeks=52) ,date.today()))
