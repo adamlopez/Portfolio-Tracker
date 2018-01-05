@@ -9,24 +9,45 @@ from datetime import date, timedelta
 import zipfile
 import io
 
-def unzipURL(url):
-    '''unzips file found at url, returning an infolist object of the files extracted.'''
-
-    try:
-        r = req.get(str(url))
-    except:
-        return "error retrieving data from url provided."
-
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    return z.namelist()
+class RateTable:
+    def __init__(self):
+        self.update()
 
 
+    def update(self):
+        url = r"https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?82a3f6f1218fcfac4242624c0b826f50"
 
-def getForexTable(url,position=0, index='Date'):
-    info = unzipURL(url)
-    # print(info)
-    forexdf =  pd.read_csv(info[position], index_col=index)
-    return forexdf
+        try:
+            r = req.get(str(url))
+            zipFile = zipfile.ZipFile(io.BytesIO(r.content))
+
+        except:
+            return "error retrieving data from {}.".format(url)
+
+        name = zipFile.namelist()[0]
+        self.masterDF =  pd.read_csv(zipFile.open(name), index_col='Date')
+
+
+
+    def getRateTable(self):
+        return self.masterDF
+
+    def getRateSeries(self, priceCurrency, baseCurrency):
+        '''cross-rate calculation based on ECB rate publication. Returns a series with exchange rates of daily price/base rates.'''
+        table = self.getRateTable()
+        print(table['USD'], table['CAD'])
+        EURToPrice = table[priceCurrency]
+        EURToBase = table[baseCurrency]
+        BaseToEUR = 1/EURToBase
+        print(BaseToEUR)
+        PriceToBase = EURToPrice.multiply(BaseToEUR)
+        return PriceToBase
+        #cross-rate conversion
+
+
+def getFXValue(priceCurrency, baseCurrency, value):
+    '''convert value at most recent exchange rate available.'''
+    getFXTable()
 
 
 def get_cad_forex( foreignCurrency, start_date, end_date, CADbase=True):
@@ -61,4 +82,3 @@ if __name__ == '__main__':
     df = getForexTable(ECBURL)
     print(df)
     quit()
-    print(get_cad_forex('USD',date.today()-timedelta(weeks=52) ,date.today()))

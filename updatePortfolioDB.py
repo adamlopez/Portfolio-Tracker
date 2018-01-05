@@ -44,8 +44,8 @@ def main():
     bookAddress = r'D:\SSIF\Portfolio-Tracker\portfolio_tracker.xlsm'
 
 
-    #connect to SQLite
 
+    #connect to SQLite
     conn = sqlite3.connect("Tracker.db")
     cursor = conn.cursor()
     print("Successfully connected to SQLite database.")

@@ -20,18 +20,21 @@ import sys
 
 # portfolio class. holds a collection of holding objects
 class Portfolio:
-    def __init__(self, name, holdingsDict=None, baseCurrency='CAD'):
+    def __init__(self, name="DefaultPortfolio", cashBalance=0, holdingsDict=None, baseCurrency='CAD'):
         self.name = name
         self.holdings = holdingsDict
         self.baseCurrency = baseCurrency
+        self.cashBalance = cashBalance
 
 
-    def printHoldings(self):
-        for holding in holdings:
-            print(holding.ticker)
+    def __repr__(self):
+        print('---------------- HOLDINGS ----------------')
+        for holding in self.holdings:
+            print(holding)
 
     def addHolding(self, holding):
         self.holdings[holding.ticker] = holding
+        self.cashBalance -= holding.getPositionValue()
 
 
     def removeHolding(self, ticker):
@@ -52,27 +55,28 @@ class Portfolio:
                 total += getValue('historical')
 
 
-    def getCashBal(self, startdate=datetime.today(), endDate=datetime.today()):
-        print("Cash balance")
-        return 100
+    def getCashBalance(self, startdate=datetime.today(), endDate=datetime.today()):
+        return cashBalance
 
-    def calculate_sector_weights(self, holdings_df):
-        """group information by sector, returning a dataframe of weights by sector."""
+
+    def getSectorWeights(self):
+        '''group information by sector, returning a dictionary of weights by sector.'''
+
+        sectorDict = {}
+        #populate dictionary with sectors
+        for s in self.SECTORS:
+            sectorDict[s] = 0
 
         #make Series of unique sectors for index
-        unique_sectors = pd.Series(holdings_df.Sector.unique())
 
-        sector_df = pd.DataFrame(data=None, index=unique_sectors, columns=['Value ($CAD)', 'Value (%)'])
-
-        #calculate sector $ values
-        for sector in unique_sectors:
-            sector_df.loc[sector,'Value ($CAD)'] = holdings_df.loc[holdings_df['Sector'] == sector,'Total Value ($CAD)'].sum()
-
-        portfolio_value = sector_df['Value ($CAD)'].sum()
+        for key, value in self.holdings.items():
+            posVal = value.getPositionValue()
+            stockSector = value.getSector()
+            sectorDict[stockSector] += posVal
 
         #generate pie plot of sector weightings
         # sector_pie = plt.pie(sector_df['Value ($CAD)'], labels=sector_df.index.values, autopct=None)
-        return sector_df
+        return sectorDict
 
 
 
@@ -102,6 +106,14 @@ class Portfolio:
         }
     }
 
+    SECTORS = ['Cons. Disc.',
+               'Cons. Staples',
+               'Technology',
+               'Energy',
+               'Financials',
+               'Healthcare',
+               'Industrials',
+               'Utilities']
+
 if __name__ == "__main__":
     quit()
-    # use for testing basic portfolio-specific functionality
