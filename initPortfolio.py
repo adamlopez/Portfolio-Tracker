@@ -17,7 +17,6 @@ import requests as req
 import dash
 import numpy as np
 import datetime
-from datetime import datetime
 import holding
 import fx
 import xlwings as xw
@@ -48,9 +47,10 @@ def importPortfolio(DBname):
     master_transaction_df = pd.read_sql("SELECT * from Transactions", conn)
     print("done.")
 
-
-    print('creating holdings...')
+    print('creating holdings...', end = " ")
     holdings_df = pd.read_sql("SELECT * from Holdings", conn)
+    print('done.')
+
 
     #create dictionary of holding objects
     holdingsDict={}
@@ -70,9 +70,6 @@ def importPortfolio(DBname):
     port = portfolio.Portfolio('SSIFCAD', holdingsDict=holdingsDict, baseCurrency='CAD')
     return port
 
-    # print("importing holdings...", end = " ")
-    # holdings_df = pd.read_sql("SELECT * from Holdings", conn)
-    # print("done.")
 
 
 
@@ -101,4 +98,5 @@ if __name__ == "__main__":
     port = importPortfolio(sys.argv[1])
     url = r"https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?82a3f6f1218fcfac4242624c0b826f50"
     rates = fx.RateTable()
-    rates.getRateSeries('USD', 'CAD')
+    print(rates.getRateSeries('CAD', 'USD'))
+    print(rates.convert(100, 'CAD', 'USD'))

@@ -20,6 +20,7 @@ class Holding:
     def __init__(self, ticker=None, name=None, domicile='US', transaction_df=None, sector=None, manager=None, import_prices=True):
         self.ticker = ticker
         self.domicile = domicile
+        self.currency = currency
         self.name = name
         if import_prices == True:
             self.price_df  = portfolio_tracker.get_daily_price_timeseries_alphavantage(ticker, outputsize='full')

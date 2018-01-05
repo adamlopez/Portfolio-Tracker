@@ -1,10 +1,4 @@
 # Portfolio Tracker
 
-example commands:
-VIEW holdings
-VIEW transactions
-VIEW sectors
-
-
-BUY ticker date
-SELL ticker date
+###Goal
+to create a general-purpose portfolio management tool that can be deployed remotely to provide constant monitoring of risk and weighting metrics.
