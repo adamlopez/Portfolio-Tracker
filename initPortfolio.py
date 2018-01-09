@@ -12,14 +12,14 @@ import threading
 import sys
 import sqlite3
 import pandas as pd
-import portfolio
-import requests as req
-import dash
 import numpy as np
+import requests as req
+import xlwings as xw
 import datetime
+
+import portfolio
 import holding
 import fx
-import xlwings as xw
 
 if BLOOMBERG == True:
     import blpapi
@@ -29,6 +29,18 @@ if BLOOMBERG == True:
     AUTHORIZATION_SUCCESS = blpapi.Name("AuthorizationSuccess")
     TOKEN = blpapi.Name("token")
     SESSION_TERMINATED = blpapi.Name("SessionTerminated")
+
+
+
+class Engine:
+    '''Engine that runs the command line interface and interacts with the portfolio and holding objects accordingly.'''  
+    def __init__(self, argString):
+        print("Creating engine...")
+
+        port = importPortfolio(sys.argv[1])
+        rates = fx.RateTable()
+
+
 
 def importPortfolio(DBname):
     """Initialize the protfolio on application startup.
@@ -95,8 +107,4 @@ def startSession(args):
 
 
 if __name__ == "__main__":
-    port = importPortfolio(sys.argv[1])
-    url = r"https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?82a3f6f1218fcfac4242624c0b826f50"
-    rates = fx.RateTable()
-    print(rates.getRateSeries('CAD', 'USD'))
-    print(rates.convert(100, 'CAD', 'USD'))
+    eng = Engine(sys.argv)

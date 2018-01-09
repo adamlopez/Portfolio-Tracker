@@ -32,10 +32,12 @@ class Portfolio:
         for holding in self.holdings:
             print(holding)
 
+
+
+
     def addHolding(self, holding):
         self.holdings[holding.ticker] = holding
         self.cashBalance -= holding.getPositionValue()
-
 
     def removeHolding(self, ticker):
         for holding in self.holdings:
@@ -44,15 +46,8 @@ class Portfolio:
 
 
     def getValue(self, startdate=datetime.today(), endDate=datetime.today()):
+        '''returns historical portfolio values in timeseries format.'''
         total = 0
-        if startDate == datetime.today():
-            for holding in self.holdings:
-                total += holding.getValue()
-            return total
-
-        else:
-            for holding in self.holdings:
-                total += getValue('historical')
 
 
     def getCashBalance(self, startdate=datetime.today(), endDate=datetime.today()):
@@ -77,7 +72,6 @@ class Portfolio:
         #generate pie plot of sector weightings
         # sector_pie = plt.pie(sector_df['Value ($CAD)'], labels=sector_df.index.values, autopct=None)
         return sectorDict
-
 
 
     #Bloomberg tickers for sector-specific benchmark indicdes

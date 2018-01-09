@@ -10,7 +10,8 @@ import zipfile
 import io
 
 class RateTable:
-    def __init__(self):
+    def __init__(self, DFRateTable=None):
+        self._backupTable = DFRateTable
         self.update()
 
 
@@ -21,8 +22,9 @@ class RateTable:
             r = req.get(str(url))
             zipFile = zipfile.ZipFile(io.BytesIO(r.content))
 
-        except:
-            return "error retrieving data from {}.".format(url)
+        except ConnectionError:
+            print("error retrieving current data. Using cached exchange rates. Updated rates may not be available.")
+            return _backupTable
 
         name = zipFile.namelist()[0]
         self._masterDF =  pd.read_csv(zipFile.open(name), index_col='Date', parse_dates=True)
@@ -43,7 +45,7 @@ class RateTable:
 
         #cross-rate conversion
         PriceToBase = EURToPrice.multiply(BaseToEUR)
-        PriceToBase.rename("{}/{}".format(baseCurrency, priceCurrency), inplace=True)
+        PriceToBase.rename(f"{baseCurrency}/{priceCurrency}", inplace=True)
 
         return PriceToBase
 
@@ -55,7 +57,9 @@ class RateTable:
         try:
             dayRate = rates[date]
         except KeyError:
-            print('No rate information for {} available'.format(date.strftime("%Y-%m-%d")))
+            print(f'''No rate information for {date.strftime("%Y-%m-%d")} available.
+            Fetching cached FX table from {sys.argv[1]}.''')
+
             quit()
 
         return amount * dayRate
