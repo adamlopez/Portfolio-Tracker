@@ -33,23 +33,50 @@ if BLOOMBERG == True:
 
 
 class Engine:
-    '''Engine that runs the command line interface and interacts with the portfolio and holding objects accordingly.'''  
-    def __init__(self, argString):
+    '''Engine that runs the command line interface and interacts with the portfolio and holding objects accordingly.'''
+    def __init__(self, portfolio):
         print("Creating engine...")
+        self.rates = fx.RateTable()
+        self.portfolio = portfolio
 
-        port = importPortfolio(sys.argv[1])
-        rates = fx.RateTable()
+
+    def run(self):
+        '''start the engine in interactive mode from CLI.'''
+        active = True
+        while active:
+            command = input("Please enter a command:")
+            actions = self.parse(command)
+
+
+
+
+
+
+    def parse(self, command):
+        tokens = command.split()
+        '''two first tokens specify function to be run - rest of tokens should be treated as arguments for the function.
+            returns a tuple of action code and arguments.'''
+        for arg in tokens:
+            arg = arg.lower()
+
+        if tokens[0] == 'buy':
+            if tokens[1] == 'holding':
+                newHolding = holding.Holding(*tokens[2:]) #pass all tokens > 1 to holding constructor
+                self.portfolio.addholding(newHolding)
+                print(newHolding.asSeries())
+
+            elif tokens[1] == 'remove':
+                self.portfolio.removeHolding(*tokens[2:])
+
+        elif tokens[0] == "display":
+            if tokens[1] == 'holdings':
+                print(self.portfolio)
 
 
 
 def importPortfolio(DBname):
-    """Initialize the protfolio on application startup.
-    Will import all necessary information from database specified in input arguments.
-    """
-
-    # book = xw.Book('D:/SSIF/Portfolio-Tracker/portfolio_tracker.xlsm')
-    # sheet = book.sheets['MSFT Transactions']
-    # transaction_df = sheet.range('A1').expand('table').options(pd.DataFrame,index=True,header=True).value
+    '''Initialize the protfolio on application startup.
+    Will import all necessary information from database specified in input arguments.'''
 
     #initialize SQLdb connection
     conn = sqlite3.connect(DBname)
@@ -70,13 +97,13 @@ def importPortfolio(DBname):
         name = row.loc['Ticker']
         stockTransactions = master_transaction_df.loc[master_transaction_df['Symbol'].isin([name])]
 
-        hld =  holding.Holding(import_prices=False,
-                               ticker=row.loc['Ticker'],
-                               name=row.loc['Company'],
-                               domicile=row.loc['Country of Origin'],
-                               sector=row.loc['Sector'],
-                               manager=row.loc['Manager'],
-                               transaction_df = stockTransactions)
+        hld = holding.Holding(import_prices=False,
+                       ticker=row.loc['Ticker'],
+                       name=row.loc['Company'],
+                       domicile=row.loc['Country of Origin'],
+                       sector=row.loc['Sector'],
+                       manager=row.loc['Manager'],
+                       transaction_df = stockTransactions)
         holdingsDict[name] = hld
 
     port = portfolio.Portfolio('SSIFCAD', holdingsDict=holdingsDict, baseCurrency='CAD')
@@ -107,4 +134,6 @@ def startSession(args):
 
 
 if __name__ == "__main__":
-    eng = Engine(sys.argv)
+    port = importPortfolio('Tracker.db')
+    eng = Engine(port)
+    eng.run()

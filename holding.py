@@ -35,8 +35,21 @@ class Holding:
         self.manager = manager
 
     def __repr__(self):
+        '''replace the print operator for the holding class.'''
         return str(self.name + " Position size: " + str(self.getSharesOutstanding()))
 
+    def asSeries(self):
+        ''' Returns a holding object in series form. Particularly useful for pretty printing.'''
+        out = pd.Series(data={'Name':self.name,
+                              'Ticker':self.ticker,
+                              'Sector':self.sector,
+                              'Domicile':self.domicile,
+                              'Currency':self.currency,
+                              'Position Size':self.getSharesOutstanding(),
+                             })
+        print(out)
+        quit()
+        return out
 
     def getCurrentPrice(self):
         try:
@@ -77,7 +90,6 @@ class Holding:
         convertedCloses = convertedCloses.apply(pd.Series)
         output = pd.DataFrame({'convertedCloses':convertedCloses, 'shareCount':shareCount}, index=shareCount.index)
         print(output)
-
 
         return output
 

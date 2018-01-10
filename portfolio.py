@@ -22,27 +22,26 @@ import sys
 class Portfolio:
     def __init__(self, name="DefaultPortfolio", cashBalance=0, holdingsDict=None, baseCurrency='CAD'):
         self.name = name
-        self.holdings = holdingsDict
+        self.__holdings = holdingsDict
         self.baseCurrency = baseCurrency
         self.cashBalance = cashBalance
 
 
     def __repr__(self):
-        print('---------------- HOLDINGS ----------------')
-        for holding in self.holdings:
-            print(holding)
+        for holding in self.__holdings.values():
+            print(holding.asSeries())
 
 
 
 
     def addHolding(self, holding):
-        self.holdings[holding.ticker] = holding
+        self.__holdings[holding.ticker] = holding
         self.cashBalance -= holding.getPositionValue()
 
     def removeHolding(self, ticker):
-        for holding in self.holdings:
+        for holding in self.__holdings:
             if holding.ticker == ticker:
-                holdings.remove(holding)
+                __holdings.remove(holding)
 
 
     def getValue(self, startdate=datetime.today(), endDate=datetime.today()):
@@ -64,7 +63,7 @@ class Portfolio:
 
         #make Series of unique sectors for index
 
-        for key, value in self.holdings.items():
+        for key, value in self.__holdings.items():
             posVal = value.getPositionValue()
             stockSector = value.getSector()
             sectorDict[stockSector] += posVal
