@@ -14,84 +14,86 @@ import sqlite3
 
 import price_query
 import fx
-# import blpapi
-
 
 class Holding:
     '''used to identify a stock that was owned at some point in time.
        In order to support fractional buying and selling, a transaction ledger is implemented.'''
-    def __init__(self, ticker=None, name=None, domicile='US', currency='USD', transaction_df=None, sector=None, manager=None, import_prices=True):
+    def __init__(self, ticker=None, name=None, domicile='US', currency='USD', transaction_df=None, sector=None, manager=None, price_df=None, import_prices=False):
         self.ticker = ticker
         self.domicile = domicile
         self.currency = currency
         self.name = name
-        if import_prices == True:
-            self.price_df = price_query.get_daily_price_timeseries_alphavantage(ticker, outputsize='full')
-        else:
-            self.price_df = None
-
         self.__transaction_df = transaction_df
         self.sector = sector
         self.manager = manager
 
+        if import_prices == True:
+            self.price_df = price_query.daily_prices(ticker)
+        else:
+            self.price_df = price_df
+
     def __repr__(self):
         '''replace the print operator for the holding class.'''
-        return str(self.name + " Position size: " + str(self.getSharesOutstanding()))
+        return str(f"{self.getSharesOutstanding(value='integer')} shares of {self.name}")
 
     def asSeries(self):
-        ''' Returns a holding object in series form. Particularly useful for pretty printing.'''
-        out = pd.Series(data={'Name':self.name,
+        ''' Returns a holding object in series form. Particularly useful for concatenating with other holdings.'''
+        s = pd.Series(data={'Name':self.name,
                               'Ticker':self.ticker,
                               'Sector':self.sector,
                               'Domicile':self.domicile,
                               'Currency':self.currency,
-                              'Position Size':self.getSharesOutstanding(),
+                              'Price': self.getCurrentPrice(),
+                              'Shares Outstanding':self.getSharesOutstanding(value='integer'),
+                              'Position Value':self.getValue(value='integer'),
                              })
-        print(out)
-        quit()
-        return out
+        s.name = self.ticker
+        return s
 
     def getCurrentPrice(self):
-        try:
-            return self.price_df['5. adjusted close'].iloc[-1].astype('float')
-        except:
-            return "Error pulling price from dataframe."
+        return float(self.price_df['adjusted close'].iloc[-1])
 
-    def getSharesOutstanding(self):
+    def getSharesOutstanding(self,value='timeseries'):
         '''returns timeseries of historical shares outstanding for the holding.'''
 
         # filter down to buy and sell transactions
         transactions = self.__transaction_df.loc[self.__transaction_df['Transaction Type'].isin(['BUY', 'SELL'])]
         transactions.set_index(transactions['Transaction Date'], inplace=True) #sort by transaction date
         transactions.index = pd.to_datetime(transactions.index)
-
         output = pd.DataFrame(data=None, index=self.price_df.index, columns=['Share Count'])
-        output['Share Count'] = transactions['Transaction Quantity'].cumsum()
+        output.index = pd.to_datetime(output.index)
 
-        output['Share Count'][0] = 0  #make position value on first day of index
+        output['Share Count'] = transactions['Transaction Quantity'].cumsum()
+        output['Share Count'][0] = 0  #make position value 0 on first day of index
         output['Share Count'].fillna(method='ffill', inplace=True)
         output = output.apply(pd.Series)
-        return output
+        if value == 'timeseries':
+            return output
+        elif value == 'integer': #return most recent value
+            return output.iloc[0,0]
 
 
 
-    def getValue(self, requestedCurrency, start_date=datetime.datetime(2005,1,1)):
+    def getValue(self, requestedCurrency='USD', start_date=datetime.datetime(2007,1,1),value='timeseries'):
         '''returns holding value in timeseries format.'''
         shareCount = self.getSharesOutstanding()
 
-        closePrices = self.price_df['5. adjusted close'].astype('float64')
-        rates = fx.RateTable().getRateSeries(self.currency, 'CAD')
-        convertedCloses = closePrices.multiply(rates).apply(pd.Series).fillna(method='ffill')
+        rates = fx.RateTable().getRateSeries(requestedCurrency, 'CAD')
+        closePrices = self.price_df['adjusted close'].astype('float64')
+        closePrices.index = pd.to_datetime(closePrices.index)
 
-        print(type(closePrices))
-        print(type(shareCount))
-        print(type(convertedCloses))
-        shareCount = shareCount.apply(pd.Series)
-        convertedCloses = convertedCloses.apply(pd.Series)
-        output = pd.DataFrame({'convertedCloses':convertedCloses, 'shareCount':shareCount}, index=shareCount.index)
+        convertedCloses = closePrices.multiply(rates).apply(pd.Series).fillna(method='ffill').apply(pd.Series)
+
+        # print(df)
+        # quit()
+        # print(convertedCloses.columns)
+        output = convertedCloses[0].multiply(shareCount['Share Count'])
         print(output)
 
-        return output
+        if value == 'timeseries':
+            return output
+        elif value == 'integer': #return most recent value
+            return output.loc[pd.Timestamp.today().normalize()]
 
 
     def getTransactions(self):
@@ -101,7 +103,7 @@ class Holding:
     def update(self, timeOutput=False):
         startTime = time.clock()
         print("updating " + self.ticker + "...", end = " ")
-        self.price_df  = price_query.get_daily_price_timeseries_alphavantage(self.ticker, outputsize='full')
+        self.price_df  = price_query.daily_prices(self.ticker, outputsize='full')
         if timeOutput == False:
             endTime = time.clock()
             print('done.')

@@ -9,15 +9,10 @@ import pandas as pd
 import dash
 import numpy as np
 import datetime
-from datetime import datetime
-import holding
 import sqlite3
 import sys
 
-# import blpapi
-
-
-
+import holding
 # portfolio class. holds a collection of holding objects
 class Portfolio:
     def __init__(self, name="DefaultPortfolio", cashBalance=0, holdingsDict=None, baseCurrency='CAD'):
@@ -29,9 +24,14 @@ class Portfolio:
 
     def __repr__(self):
         for holding in self.__holdings.values():
-            print(holding.asSeries())
+            print(holding + holding.getSharesOutstanding())
 
 
+    def getHoldings(self):
+        outputDF = pd.DataFrame()
+        for ticker,holding in self.__holdings.items():
+            outputDF = outputDF.join(holding.asSeries())
+        return outputDF
 
 
     def addHolding(self, holding):
@@ -44,12 +44,12 @@ class Portfolio:
                 __holdings.remove(holding)
 
 
-    def getValue(self, startdate=datetime.today(), endDate=datetime.today()):
+    def getValue(self, startdate=datetime.datetime.today(), endDate=datetime.datetime.today()):
         '''returns historical portfolio values in timeseries format.'''
         total = 0
 
 
-    def getCashBalance(self, startdate=datetime.today(), endDate=datetime.today()):
+    def getCashBalance(self, startdate=datetime.datetime.today(), endDate=datetime.datetime.today()):
         return cashBalance
 
 
@@ -64,8 +64,9 @@ class Portfolio:
         #make Series of unique sectors for index
 
         for key, value in self.__holdings.items():
-            posVal = value.getPositionValue()
-            stockSector = value.getSector()
+            posVal = value.getValue(value='integer')
+            print(posVal)
+            stockSector = value.sector
             sectorDict[stockSector] += posVal
 
         #generate pie plot of sector weightings

@@ -7,14 +7,10 @@ Created on Mon Dec 11 14:25:34 2017
 global BLOOMBERG
 BLOOMBERG = False
 
-from optparse import OptionParser, OptionValueError
-import threading
 import sys
 import sqlite3
 import pandas as pd
 import numpy as np
-import requests as req
-import xlwings as xw
 import datetime
 
 import portfolio
@@ -48,10 +44,6 @@ class Engine:
             actions = self.parse(command)
 
 
-
-
-
-
     def parse(self, command):
         tokens = command.split()
         '''two first tokens specify function to be run - rest of tokens should be treated as arguments for the function.
@@ -70,11 +62,14 @@ class Engine:
 
         elif tokens[0] == "display":
             if tokens[1] == 'holdings':
-                print(self.portfolio)
+                print(self.portfolio.getHoldings())
+
+            if tokens[1] == 'sectors':
+                print(self.portfolio.getSectorWeights())
 
 
 
-def importPortfolio(DBname):
+def importPortfolio(DBname, import_prices=True):
     '''Initialize the protfolio on application startup.
     Will import all necessary information from database specified in input arguments.'''
 
@@ -86,18 +81,28 @@ def importPortfolio(DBname):
     master_transaction_df = pd.read_sql("SELECT * from Transactions", conn)
     print("done.")
 
+    print("importing prices...", end = " ")
+    master_price_df = pd.read_sql("SELECT * from Prices", conn)
+    print("done.")
+
     print('creating holdings...', end = " ")
     holdings_df = pd.read_sql("SELECT * from Holdings", conn)
     print('done.')
+
 
 
     #create dictionary of holding objects
     holdingsDict={}
     for index,row in holdings_df.iterrows():
         name = row.loc['Ticker']
+
+        prices = master_price_df.loc[master_price_df['symbol'].isin([name])]
+        prices.index = prices['timestamp']
+        # prices.drop('timestamp', inplace=True)
+
         stockTransactions = master_transaction_df.loc[master_transaction_df['Symbol'].isin([name])]
 
-        hld = holding.Holding(import_prices=False,
+        hld = holding.Holding(price_df=prices,
                        ticker=row.loc['Ticker'],
                        name=row.loc['Company'],
                        domicile=row.loc['Country of Origin'],
@@ -105,32 +110,11 @@ def importPortfolio(DBname):
                        manager=row.loc['Manager'],
                        transaction_df = stockTransactions)
         holdingsDict[name] = hld
+        print(f'{name} instantiated.')
 
     port = portfolio.Portfolio('SSIFCAD', holdingsDict=holdingsDict, baseCurrency='CAD')
+    conn.close()
     return port
-
-
-
-
-
-
-def startSession(args):
-    #BLOOMBERG BOILERPLATE
-    options = parseCmdLine()
-    #Fill SessionOptions
-    sessionOptions = blpapi.SessionOptions()
-    sessionOptions.setServerHost(options.host)
-    sessionOptions.setServerPort(options.port)
-    print("Connecting to %s:%s" % (options.host, options.port))
-    session = blpapi.Session(sessionOptions)
-
-    # Start a Session
-    if not session.start():
-        print("Failed to start session.")
-        return
-
-    return session
-
 
 
 if __name__ == "__main__":

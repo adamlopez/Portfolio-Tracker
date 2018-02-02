@@ -8,7 +8,7 @@ Main access point will be from the command line (interface still has to be desig
 SQLite will be used as the backend for storing transaction information.
 
 ### Dependencies
-⋅⋅* Pandas
-⋅⋅* Numpy
-⋅⋅* Sqlite3
-⋅⋅* Requests
+Pandas
+Numpy
+Sqlite3
+Requests

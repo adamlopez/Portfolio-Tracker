@@ -73,10 +73,13 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
             json_df = pd.read_json(stock_info_url, orient='columns')
 
         except:
-            print('second key failed, trying third key.')
-            key = apiKey[1]
-            stock_info_url = 'http://www.alphavantage.co/query?function=' + function + '&symbol=' + symbol + '&apikey=' + key + '&outputsize='+str(outputsize)
-            json_df = pd.read_json(stock_info_url, orient='columns')
+            try:
+                print('second key failed, trying third key.')
+                key = apiKey[1]
+                stock_info_url = 'http://www.alphavantage.co/query?function=' + function + '&symbol=' + symbol + '&apikey=' + key + '&outputsize='+str(outputsize)
+                json_df = pd.read_json(stock_info_url, orient='columns')
+            except:
+                print(f'{symbol} is not a valid ticker. if stock is listed outside of US, preface ticker with exchange (ex:TSE:RY.)')
 
     price_df = pd.DataFrame(data=json_df['Time Series (Daily)'])
 
@@ -99,6 +102,7 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
     price_df.drop(0, axis=1, inplace=True) #drop empty column from JSON output
     price_df['symbol'] = symbol
     price_df.index = pd.to_datetime(price_df.index) #format index as datetime object
+    price_df.index.normalize()
     np.round(price_df.index.astype(np.int64), -9).astype('datetime64[ns]') #truncate datetime to day value
 
     if timer == True:
@@ -110,7 +114,7 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
 
 if __name__ == "__main__":
 
-    symbols=['AAPL', 'RY', 'CVS', 'WFC', 'MEQ','GNTX', 'L','TSLA']
+    symbols=['AAPL', 'RY', 'CVS', 'WFC', 'TSE:MEQ','GNTX', 'L','TSLA']
     conn = sqlite3.connect("Tracker.db")
     cursor = conn.cursor()
 
