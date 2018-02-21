@@ -20,6 +20,7 @@ class Portfolio:
         self.__holdings = holdingsDict
         self.baseCurrency = baseCurrency
         self.cashBalance = cashBalance
+        self.holdings_df = None # for caching summary holdings data table
 
 
     def __repr__(self):
@@ -28,10 +29,16 @@ class Portfolio:
 
 
     def getHoldings(self):
-        outputDF = pd.DataFrame()
-        for ticker,holding in self.__holdings.items():
-            outputDF = outputDF.join(holding.asSeries())
-        return outputDF
+        if self.holdings_df is None:
+            outputDF = pd.DataFrame()
+            for ticker,holding in self.__holdings.items():
+                s = holding.asSeries()
+                outputDF = outputDF.append(s)
+            self.holdings_df = outputDF
+            return outputDF
+
+        else :
+            return self.holdings_df
 
 
     def addHolding(self, holding):
@@ -63,10 +70,10 @@ class Portfolio:
 
         #make Series of unique sectors for index
 
-        for key, value in self.__holdings.items():
-            posVal = value.getValue(value='integer')
+        for key, holding in self.__holdings.items():
+            posVal = holding.getValue(value='integer')
             print(posVal)
-            stockSector = value.sector
+            stockSector = holding.sector
             sectorDict[stockSector] += posVal
 
         #generate pie plot of sector weightings

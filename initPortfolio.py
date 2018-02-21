@@ -78,11 +78,11 @@ def importPortfolio(DBname, import_prices=True):
     cursor = conn.cursor()
 
     print("importing transactions...", end = " ")
-    master_transaction_df = pd.read_sql("SELECT * from Transactions", conn)
+    master_transaction_df = pd.read_sql("SELECT * from Transactions", conn, index_col=['ID'])
     print("done.")
 
     print("importing prices...", end = " ")
-    master_price_df = pd.read_sql("SELECT * from Prices", conn)
+    master_price_df = pd.read_sql("SELECT * from Prices", conn,index_col=['index'])
     print("done.")
 
     print('creating holdings...', end = " ")
@@ -97,9 +97,7 @@ def importPortfolio(DBname, import_prices=True):
         name = row.loc['Ticker']
 
         prices = master_price_df.loc[master_price_df['symbol'].isin([name])]
-        prices.index = prices['timestamp']
-        # prices.drop('timestamp', inplace=True)
-
+        prices.index = pd.to_datetime(prices.index)
         stockTransactions = master_transaction_df.loc[master_transaction_df['Symbol'].isin([name])]
 
         hld = holding.Holding(price_df=prices,

@@ -51,26 +51,29 @@ class Holding:
         return s
 
     def getCurrentPrice(self):
-        return float(self.price_df['adjusted close'].iloc[-1])
+        value = self.price_df.loc[self.price_df.index.max()].loc['adjusted close']
+        return value
 
     def getSharesOutstanding(self,value='timeseries'):
         '''returns timeseries of historical shares outstanding for the holding.'''
 
         # filter down to buy and sell transactions
-        transactions = self.__transaction_df.loc[self.__transaction_df['Transaction Type'].isin(['BUY', 'SELL'])]
+        transactions = self.__transaction_df.loc[self.__transaction_df['Type'].isin(['BUY','SELL'])]
         transactions.set_index(transactions['Transaction Date'], inplace=True) #sort by transaction date
+
         transactions.index = pd.to_datetime(transactions.index)
+
         output = pd.DataFrame(data=None, index=self.price_df.index, columns=['Share Count'])
         output.index = pd.to_datetime(output.index)
-
-        output['Share Count'] = transactions['Transaction Quantity'].cumsum()
+        output['Share Count'] = transactions['Quantity'].cumsum()
         output['Share Count'][0] = 0  #make position value 0 on first day of index
         output['Share Count'].fillna(method='ffill', inplace=True)
         output = output.apply(pd.Series)
         if value == 'timeseries':
+            # print(output)
             return output
         elif value == 'integer': #return most recent value
-            return output.iloc[0,0]
+            return output.loc[output.index.max()]
 
 
 
@@ -83,12 +86,7 @@ class Holding:
         closePrices.index = pd.to_datetime(closePrices.index)
 
         convertedCloses = closePrices.multiply(rates).apply(pd.Series).fillna(method='ffill').apply(pd.Series)
-
-        # print(df)
-        # quit()
-        # print(convertedCloses.columns)
         output = convertedCloses[0].multiply(shareCount['Share Count'])
-        print(output)
 
         if value == 'timeseries':
             return output
@@ -123,9 +121,14 @@ if __name__ == "__main__":
     print("importing transactions...", end = " ")
     master_transaction_df = pd.read_sql("SELECT * from Transactions", conn)
     print("done.")
-
+    master_price_df = pd.read_sql("SELECT * from Prices", conn,index_col=['timestamp','symbol'])
+    print(master_price_df)
+    quit()
     ticker = 'AAPL'
-    stockTransactions = master_transaction_df.loc[master_transaction_df['Symbol'].isin([ticker])]
 
-    h = Holding(ticker='AAPL', name='Apple', domicile='US', currency='USD', transaction_df=stockTransactions, sector='Technology', manager=None, import_prices=True)
-    print(h.getValue('USD'))
+    stockTransactions = master_transaction_df.loc[master_transaction_df['Symbol'].isin([ticker])]
+    prices = master_price_df.loc[master_price_df['symbol'].isin([ticker])]
+    print(prices)
+    quit()
+    h = Holding(ticker=ticker, name='Apple', domicile='US', currency='USD', transaction_df=stockTransactions, sector='Technology', price_df=prices)
+    print(h.getValue())

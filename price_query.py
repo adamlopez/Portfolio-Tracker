@@ -1,4 +1,3 @@
-print('Importing modules...', end= " ")
 import time, datetime, xlwings as xw, pandas as pd, numpy as np, requests as req
 from datetime import date
 import sqlite3
@@ -6,7 +5,6 @@ import sys
 import matplotlib.pyplot as plt
 import logging
 import json
-print('done.')
 try:
     import blpapi
     import portfolio
@@ -57,29 +55,30 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
 
     if timer == True:
         startTime = time.clock()
-        print(f'pulling prices for {symbol}...')
 
+    print(f'pulling prices for {symbol}...')
     function = 'TIME_SERIES_DAILY_ADJUSTED'
     try:
         key = apiKey[0]
-        stock_info_url = 'http://www.alphavantage.co/query?function=' + function + '&symbol=' + symbol + '&apikey=' + key + '&outputsize='+str(outputsize)
+        stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol={symbol}&apikey={key}&outputsize={outputsize}'
         json_df = pd.read_json(stock_info_url, orient='columns')
 
     except:
         try:
             print('first key failed, trying second key.')
             key = apiKey[1]
-            stock_info_url = 'http://www.alphavantage.co/query?function=' + function + '&symbol=' + symbol + '&apikey=' + key + '&outputsize='+str(outputsize)
+            stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol={symbol}&apikey={key}&outputsize={outputsize}'
             json_df = pd.read_json(stock_info_url, orient='columns')
 
         except:
             try:
-                print('second key failed, trying third key.')
-                key = apiKey[1]
-                stock_info_url = 'http://www.alphavantage.co/query?function=' + function + '&symbol=' + symbol + '&apikey=' + key + '&outputsize='+str(outputsize)
+                print('second key failed, trying third key and TSE: prefix.')
+                key = apiKey[2]
+                stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol=TSE:{symbol}&apikey={key}&outputsize={outputsize}'
                 json_df = pd.read_json(stock_info_url, orient='columns')
             except:
                 print(f'{symbol} is not a valid ticker. if stock is listed outside of US, preface ticker with exchange (ex:TSE:RY.)')
+            return pd.DataFrame(data=None, columns=['open','high','low','close','adjusted close','volume','dividend amount','split coefficient'])
 
     price_df = pd.DataFrame(data=json_df['Time Series (Daily)'])
 
@@ -105,7 +104,7 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
     price_df.index.normalize()
     np.round(price_df.index.astype(np.int64), -9).astype('datetime64[ns]') #truncate datetime to day value
 
-    if timer == True:
+    if timer:
         endTime = time.clock()
         print(f'Done. ({endTime-startTime} seconds.)\n')
 
@@ -113,14 +112,5 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
 
 
 if __name__ == "__main__":
-
-    symbols=['AAPL', 'RY', 'CVS', 'WFC', 'TSE:MEQ','GNTX', 'L','TSLA']
     conn = sqlite3.connect("Tracker.db")
     cursor = conn.cursor()
-
-    newPrices = batch_prices(symbols)
-    AAPL = daily_prices(symbols[0])
-    print(AAPL)
-    AAPL.to_sql("Prices", conn, if_exists='replace')
-
-    newPrices.to_sql("Prices", conn, if_exists='append')
