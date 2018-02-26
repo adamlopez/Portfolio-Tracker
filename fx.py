@@ -15,6 +15,10 @@ class RateTable:
         self.update()
 
 
+    def __repr__(self):
+        print(self._masterDF)
+        return ''
+
     def update(self):
         url = r"https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?82a3f6f1218fcfac4242624c0b826f50"
 
@@ -28,7 +32,7 @@ class RateTable:
 
         name = zipFile.namelist()[0]
         self._masterDF =  pd.read_csv(zipFile.open(name), index_col='Date', parse_dates=True)
-
+        return self._masterDF
 
 
     def getRateTable(self):
@@ -52,17 +56,23 @@ class RateTable:
 
     def convert(self, amount, priceCurrency, baseCurrency, date=date.today()):
         '''convert value at most recent exchange rate available.'''
+
         rates = self.getRateSeries(priceCurrency, baseCurrency)
 
         try:
             dayRate = rates[date]
         except KeyError:
-            print(f'''No rate information for {date.strftime("%Y-%m-%d")} available.
-            Fetching cached FX table from {sys.argv[1]}.''')
+            mostRecentDay = rates.index.max()
+            print(f'''WARNING: No rate information for {date.strftime("%Y-%m-%d")} available. Using rate from {mostRecentDay.strftime("%Y-%m-%d")} instead.''')
 
-            quit()
+            dayRate = float(rates[mostRecentDay])
 
-        return amount * dayRate
+        amount = float(amount)
+
+        return (amount * dayRate)
+
+global globalRateTable
+globalRateTable = RateTable()
 
 
 if __name__ == '__main__':

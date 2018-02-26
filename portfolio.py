@@ -12,26 +12,41 @@ import datetime
 import sqlite3
 import sys
 
-import holding
-# portfolio class. holds a collection of holding objects
+import holding, fx
+
+''' portfolio class. holds a collection of holding objects '''
+ 
 class Portfolio:
     def __init__(self, name="DefaultPortfolio", cashBalance=0, holdingsDict=None, baseCurrency='CAD'):
         self.name = name
-        self.__holdings = holdingsDict
+        self.holdings = holdingsDict
         self.baseCurrency = baseCurrency
         self.cashBalance = cashBalance
-        self.holdings_df = None # for caching summary holdings data table
+        self.RateTable = fx.RateTable() # most recent forex rates
+
+        # for caching summary data tables
+        self.holdings_df = None
+        self.sectorDict = None
 
 
     def __repr__(self):
-        for holding in self.__holdings.values():
-            print(holding + holding.getSharesOutstanding())
+        for holding in self.holdings.values():
+            print(holding + " " + holding.getSharesOutstanding())
 
+
+    def addHolding(self, holding):
+        self.holdings[holding.ticker] = holding
+        self.cashBalance -= holding.getPositionValue()
+
+    def removeHolding(self, ticker):
+        for holding in self.holdings:
+            if holding.ticker == ticker:
+                holdings.remove(holding)
 
     def getHoldings(self):
         if self.holdings_df is None:
             outputDF = pd.DataFrame()
-            for ticker,holding in self.__holdings.items():
+            for ticker,holding in self.holdings.items():
                 s = holding.asSeries()
                 outputDF = outputDF.append(s)
             self.holdings_df = outputDF
@@ -41,14 +56,6 @@ class Portfolio:
             return self.holdings_df
 
 
-    def addHolding(self, holding):
-        self.__holdings[holding.ticker] = holding
-        self.cashBalance -= holding.getPositionValue()
-
-    def removeHolding(self, ticker):
-        for holding in self.__holdings:
-            if holding.ticker == ticker:
-                __holdings.remove(holding)
 
 
     def getValue(self, startdate=datetime.datetime.today(), endDate=datetime.datetime.today()):
@@ -62,22 +69,24 @@ class Portfolio:
 
     def getSectorWeights(self):
         '''group information by sector, returning a dictionary of weights by sector.'''
+        if self.sectorDict == None:
+            sectorDict = {}
+            #populate dictionary with sectors
+            for s in self.SECTORS:
+                sectorDict[s] = 0
 
-        sectorDict = {}
-        #populate dictionary with sectors
-        for s in self.SECTORS:
-            sectorDict[s] = 0
+            #make Series of unique sectors for index
 
-        #make Series of unique sectors for index
+            for key, holding in self.holdings.items():
+                posVal = holding.getValue(value='integer')
+                print(key, posVal)
+                stockSector = holding.sector
+                sectorDict[stockSector] += posVal
 
-        for key, holding in self.__holdings.items():
-            posVal = holding.getValue(value='integer')
-            print(posVal)
-            stockSector = holding.sector
-            sectorDict[stockSector] += posVal
+            #generate pie plot of sector weightings
+            # sector_pie = plt.pie(sector_df['Value ($CAD)'], labels=sector_df.index.values, autopct=None)
+            self.sectorValues = sectorDict
 
-        #generate pie plot of sector weightings
-        # sector_pie = plt.pie(sector_df['Value ($CAD)'], labels=sector_df.index.values, autopct=None)
         return sectorDict
 
 

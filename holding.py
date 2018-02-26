@@ -18,19 +18,17 @@ import fx
 class Holding:
     '''used to identify a stock that was owned at some point in time.
        In order to support fractional buying and selling, a transaction ledger is implemented.'''
-    def __init__(self, ticker=None, name=None, domicile='US', currency='USD', transaction_df=None, sector=None, manager=None, price_df=None, import_prices=False):
+    def __init__(self, ticker=None, name=None, domicile='US', currency='USD', transaction_df=None, sector=None, manager=None, price_df=None):
         self.ticker = ticker
         self.domicile = domicile
         self.currency = currency
         self.name = name
-        self.__transaction_df = transaction_df
         self.sector = sector
         self.manager = manager
+        self.transaction_df = transaction_df
+        self.price_df = price_df
 
-        if import_prices == True:
-            self.price_df = price_query.daily_prices(ticker)
-        else:
-            self.price_df = price_df
+        self.share_series = None
 
     def __repr__(self):
         '''replace the print operator for the holding class.'''
@@ -48,32 +46,44 @@ class Holding:
                               'Position Value':self.getValue(value='integer'),
                              })
         s.name = self.ticker
+        print(s)
         return s
 
-    def getCurrentPrice(self):
-        value = self.price_df.loc[self.price_df.index.max()].loc['adjusted close']
+    def getCurrentPrice(self, currency=None):
+        '''returns most recent price available.'''
+
+        currency = self.currency
+        value = self.price_df.loc[self.price_df.index.max(), 'adjusted close']
+
+        converted = fx.globalRateTable.convert(value,priceCurrency='CAD',baseCurrency=self.currency)
+
+        print('CONVERTED: ' + str(converted))
+
         return value
 
     def getSharesOutstanding(self,value='timeseries'):
         '''returns timeseries of historical shares outstanding for the holding.'''
 
-        # filter down to buy and sell transactions
-        transactions = self.__transaction_df.loc[self.__transaction_df['Type'].isin(['BUY','SELL'])]
-        transactions.set_index(transactions['Transaction Date'], inplace=True) #sort by transaction date
+        if self.share_series is None:
+            # filter to buy and sell transactions
+            transactions = self.transaction_df.loc[self.transaction_df['Type'].isin(['BUY','SELL'])]
+            transactions.set_index(transactions['Transaction Date'], inplace=True) #sort by transaction date
 
-        transactions.index = pd.to_datetime(transactions.index)
+            transactions.index = pd.to_datetime(transactions.index)
 
-        output = pd.DataFrame(data=None, index=self.price_df.index, columns=['Share Count'])
-        output.index = pd.to_datetime(output.index)
-        output['Share Count'] = transactions['Quantity'].cumsum()
-        output['Share Count'][0] = 0  #make position value 0 on first day of index
-        output['Share Count'].fillna(method='ffill', inplace=True)
-        output = output.apply(pd.Series)
+            output = pd.DataFrame(data=None, index=self.price_df.index, columns=['Share Count'])
+            output.index = pd.to_datetime(output.index)
+            output['Share Count'] = transactions['Quantity'].cumsum()
+            output['Share Count'][0] = 0  #make position value 0 on first day of index
+            output['Share Count'].fillna(method='ffill', inplace=True)
+            output = output.apply(pd.Series)
+            self.share_series = output
+
         if value == 'timeseries':
             # print(output)
-            return output
+            return self.share_series
         elif value == 'integer': #return most recent value
-            return output.loc[output.index.max()]
+            return self.share_series.loc[output.index.max(), 'Share Count']
 
 
 
@@ -91,23 +101,23 @@ class Holding:
         if value == 'timeseries':
             return output
         elif value == 'integer': #return most recent value
-            return output.loc[pd.Timestamp.today().normalize()]
+            return output.loc[self.price_df.index.max()]
 
 
     def getTransactions(self):
-        return __transaction_df
+        return transaction_df
 
 
     def update(self, timeOutput=False):
         startTime = time.clock()
         print("updating " + self.ticker + "...", end = " ")
         self.price_df  = price_query.daily_prices(self.ticker, outputsize='full')
-        if timeOutput == False:
-            endTime = time.clock()
-            print('done.')
-        else:
+        if timeOutput == True:
             endTime = time.clock()
             print("done. ({} seconds elapsed)".format(endTime - startTime))
+        else:
+            endTime = time.clock()
+            print('done.')
 
     def commit(self, conn, ifExists='replace'):
         '''save all holding-specific information to the database. Only reason to use this is to make sure the transaction dataframe gets saved properly.'''

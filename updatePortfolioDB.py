@@ -6,17 +6,6 @@ import matplotlib.pyplot as plt
 import logging
 import price_query
 
-#####################################################################################
-###################################  MAIN PROGRAM ###################################
-#####################################################################################
-
-
-#connect to SQLite
-DBAddress = 'Tracker.db'
-conn = sqlite3.connect(DBAddress)
-cursor = conn.cursor()
-print("Successfully connected to SQLite database.")
-
 
 def updateHoldings():
     try:
@@ -27,9 +16,10 @@ def updateHoldings():
         print('error importing holdings dataframe.')
         quit()
 
-def updateTransactions():
-    transaction_df = pd.read_csv('transactions.csv', encoding='latin1', index_col='ID')
+def updateTransactions(path):
+    transaction_df = pd.read_csv(path, encoding='latin1', index_col='ID')
     transaction_df.to_sql("Transactions", conn, if_exists='replace')
+    return master_transaction_df
 
 def updatePrices():
     allTransactions = pd.read_sql("SELECT * from Transactions", conn)
@@ -42,15 +32,18 @@ def updatePrices():
 
 
     master_price_df.to_sql("Prices", conn, if_exists='replace')
-
-
+    return master_price_df
 
 
 if __name__ == '__main__':
     start_time = time.clock()
-    updateTransactions()
-    # updatePrices()
-    updateHoldings()
+
+    #connect to SQLite
+    conn = sqlite3.connect('Tracker.db')
+    print("Successfully connected to SQLite database.")
+
+    transDF = updateTransactions('transactions.csv')
+    PriceDF = updatePrices()
     end_time = time.clock()
     total_time = end_time - start_time
     print('Database updated successfully.')
