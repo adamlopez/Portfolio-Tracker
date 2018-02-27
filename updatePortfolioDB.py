@@ -19,7 +19,7 @@ def updateHoldings():
 def updateTransactions(path):
     transaction_df = pd.read_csv(path, encoding='latin1', index_col='ID')
     transaction_df.to_sql("Transactions", conn, if_exists='replace')
-    return master_transaction_df
+    return transaction_df
 
 def updatePrices():
     allTransactions = pd.read_sql("SELECT * from Transactions", conn)
@@ -41,6 +41,7 @@ if __name__ == '__main__':
     #connect to SQLite
     conn = sqlite3.connect('Tracker.db')
     print("Successfully connected to SQLite database.")
+
 
     transDF = updateTransactions('transactions.csv')
     PriceDF = updatePrices()

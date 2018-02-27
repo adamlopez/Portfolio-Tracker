@@ -15,7 +15,7 @@ import sys
 import holding, fx
 
 ''' portfolio class. holds a collection of holding objects '''
- 
+
 class Portfolio:
     def __init__(self, name="DefaultPortfolio", cashBalance=0, holdingsDict=None, baseCurrency='CAD'):
         self.name = name
@@ -50,11 +50,12 @@ class Portfolio:
                 s = holding.asSeries()
                 outputDF = outputDF.append(s)
             self.holdings_df = outputDF
-            return outputDF
 
-        else :
-            return self.holdings_df
+        else:
+            outputDF = self.holdings_df
 
+        print(outputDF['Position Value'].sum())
+        return outputDF
 
 
 
@@ -86,6 +87,19 @@ class Portfolio:
             #generate pie plot of sector weightings
             # sector_pie = plt.pie(sector_df['Value ($CAD)'], labels=sector_df.index.values, autopct=None)
             self.sectorValues = sectorDict
+            sectorSummaryDF = pd.DataFrame.from_dict(data=sectorDict,orient='index',columns=['Sector Value ($CAD)'])
+            # sectorSummaryDF.rename({0:'Sector Value ($CAD)'}, axis='columns', inplace=True)
+            print(sectorSummaryDF)
+            quit()
+            sectorSummaryDF['%% of total portfolio'] = sectorSummaryDF['Sector Value ($CAD)']/sectorSummaryDF['Sector Value ($CAD)'].sum()
+
+            print("total portfolio value: {sectorSummaryDF['Sector Value ($CAD)'].sum()}")
+
+            self.total_value = sectorSummaryDF['Sector Value ($CAD)'].sum()
+
+            print(sectorSummaryDF)
+
+            quit()
 
         return sectorDict
 

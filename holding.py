@@ -30,6 +30,12 @@ class Holding:
 
         self.share_series = None
 
+        # to deal with cash accounts
+        if 'cash account' in self.name.lower():
+            self.isCashAcct = True
+        else:
+            self.isCashAcct = False
+
     def __repr__(self):
         '''replace the print operator for the holding class.'''
         return str(f"{self.getSharesOutstanding(value='integer')} shares of {self.name}")
@@ -46,23 +52,34 @@ class Holding:
                               'Position Value':self.getValue(value='integer'),
                              })
         s.name = self.ticker
-        print(s)
         return s
+
 
     def getCurrentPrice(self, currency=None):
         '''returns most recent price available.'''
 
         currency = self.currency
-        value = self.price_df.loc[self.price_df.index.max(), 'adjusted close']
+        try:
+            value = self.price_df.loc[self.price_df.index.max(), 'adjusted close']
+
+        except TypeError: #will be raised by any holdings without prices (implemented for cash accts)
+            value = 0
 
         converted = fx.globalRateTable.convert(value,priceCurrency='CAD',baseCurrency=self.currency)
 
-        print('CONVERTED: ' + str(converted))
-
         return value
+
 
     def getSharesOutstanding(self,value='timeseries'):
         '''returns timeseries of historical shares outstanding for the holding.'''
+
+        #return empty dataframe if the holding is a cash account
+        if self.isCashAcct == True:
+            if value == 'timeseries':
+                return pd.DataFrame(data=None, index=pd.date_range(start=datetime.datetime(2007,1,1), end=pd.Timestamp.today()))
+
+            elif value == 'integer':
+                return 0
 
         if self.share_series is None:
             # filter to buy and sell transactions
@@ -87,21 +104,35 @@ class Holding:
 
 
 
-    def getValue(self, requestedCurrency='USD', start_date=datetime.datetime(2007,1,1),value='timeseries'):
+    def getValue(self, requestedCurrency='CAD', start_date=datetime.datetime(2007,1,1),value='timeseries'):
         '''returns holding value in timeseries format.'''
-        shareCount = self.getSharesOutstanding()
 
-        rates = fx.RateTable().getRateSeries(requestedCurrency, 'CAD')
-        closePrices = self.price_df['adjusted close'].astype('float64')
-        closePrices.index = pd.to_datetime(closePrices.index)
+        if self.isCashAcct == True:
+            transactions = self.transaction_df
+            transactions.set_index(transactions['Transaction Date'], inplace=True) #sort by transaction date
+            transactions.index = pd.to_datetime(transactions.index)
 
-        convertedCloses = closePrices.multiply(rates).apply(pd.Series).fillna(method='ffill').apply(pd.Series)
-        output = convertedCloses[0].multiply(shareCount['Share Count'])
+            output = pd.DataFrame(data=None, index=pd.date_range(start=datetime.datetime(2007,1,1), end=pd.Timestamp.today()))
+            output['Position Value'] = transactions['Settlement Amount'].cumsum()
+            output['Position Value'][0] = 0  #make position value 0 on first day of index
+            output['Position Value'].fillna(method='ffill', inplace=True)
+            output.index = pd.to_datetime(output.index)
+            output = output.apply(pd.Series)
+            output = output['Position Value']
+
+        else:
+            shareCount = self.getSharesOutstanding()
+            rates = fx.RateTable().getRateSeries(requestedCurrency, self.currency)
+            closePrices = self.price_df['adjusted close'].astype('float64')
+            closePrices.index = pd.to_datetime(closePrices.index)
+
+            convertedCloses = closePrices.multiply(rates).apply(pd.Series).fillna(method='ffill').apply(pd.Series)
+            output = convertedCloses[0].multiply(shareCount['Share Count'])
 
         if value == 'timeseries':
             return output
         elif value == 'integer': #return most recent value
-            return output.loc[self.price_df.index.max()]
+            return output.loc[output.index.max()]
 
 
     def getTransactions(self):

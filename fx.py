@@ -63,9 +63,9 @@ class RateTable:
             dayRate = rates[date]
         except KeyError:
             mostRecentDay = rates.index.max()
-            print(f'''WARNING: No rate information for {date.strftime("%Y-%m-%d")} available. Using rate from {mostRecentDay.strftime("%Y-%m-%d")} instead.''')
-
             dayRate = float(rates[mostRecentDay])
+
+            print(f'''WARNING: No rate information for {date.strftime("%Y-%m-%d")} available. Using rate of {dayRate} from {mostRecentDay.strftime("%Y-%m-%d")} instead.''')
 
         amount = float(amount)
 
