@@ -67,14 +67,13 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
             print('first key failed, trying second key.')
             key = apiKey[1]
             stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol={symbol}&apikey={key}&outputsize={outputsize}'
-            print(stock_info_url)
             json_df = pd.read_json(stock_info_url, orient='columns')
 
         except ValueError:
             try:
-                print('second key failed, trying third key and TSE: prefix.')
+                print('second key failed, trying third key.')
                 key = apiKey[2]
-                stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol=TSE:{symbol}&apikey={key}&outputsize={outputsize}'
+                stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol={symbol}&apikey={key}&outputsize={outputsize}'
                 json_df = pd.read_json(stock_info_url, orient='columns')
             except ValueError:
                 print(f'{symbol} is not a valid ticker. if stock is listed outside of US, preface ticker with exchange (ex:TSE:RY.)')

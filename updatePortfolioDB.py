@@ -20,16 +20,21 @@ def updateTransactions(path):
     transaction_df.to_sql("Transactions", conn, if_exists='replace')
     return transaction_df
 
-def updatePrices():
-    allTransactions = pd.read_sql("SELECT * from Transactions", conn)
-    tickers = allTransactions['Symbol'].unique()
-    master_price_df = pd.DataFrame(data=[],columns=['open','high','low','close','adjusted close','volume','dividend amount','split coefficient','symbol'])
+def updatePrices(conn):
+    old_price_df = pd.read_sql("SELECT * from Prices", conn, index_col='index')
+    # print(old_price_df)
+    Holdings = pd.read_sql("SELECT * from Holdings", conn)
+    tickers = Holdings['Ticker'].unique()
+    print(tickers)
+    master_price_df = pd.DataFrame(data=[],columns=['timestamp','open','high','low','close','adjusted close','volume','dividend amount','split coefficient','symbol'])
 
     for ticker in tickers:
         df = price_query.daily_prices(ticker)
-        master_price_df = master_price_df.append(df)
+        if True != df.empty:
+            master_price_df = master_price_df.append(df)
 
 
+    newDF = pd.concat([master_price_df,old_price_df]).drop_duplicates()
     master_price_df.to_sql("Prices", conn, if_exists='replace')
     return master_price_df
 
@@ -41,10 +46,9 @@ if __name__ == '__main__':
     conn = sqlite3.connect('Tracker.db')
     print("Successfully connected to SQLite database.")
 
-
     transDF = updateTransactions('transactions.csv')
-    PriceDF = updatePrices()
+    PriceDF = updatePrices(conn)
     end_time = time.clock()
     total_time = end_time - start_time
     print('Database updated successfully.')
-    print('total runtime: ' + str(total_time))
+    print(f'total runtime: {str(total_time)}')
