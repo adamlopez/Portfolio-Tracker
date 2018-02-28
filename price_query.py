@@ -1,8 +1,7 @@
-import time, datetime, xlwings as xw, pandas as pd, numpy as np, requests as req
+import time, datetime, pandas as pd, numpy as np, requests as req
 from datetime import date
 import sqlite3
 import sys
-import matplotlib.pyplot as plt
 import logging
 import json
 try:
@@ -63,20 +62,21 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
         stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol={symbol}&apikey={key}&outputsize={outputsize}'
         json_df = pd.read_json(stock_info_url, orient='columns')
 
-    except:
+    except ValueError:
         try:
             print('first key failed, trying second key.')
             key = apiKey[1]
             stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol={symbol}&apikey={key}&outputsize={outputsize}'
+            print(stock_info_url)
             json_df = pd.read_json(stock_info_url, orient='columns')
 
-        except:
+        except ValueError:
             try:
                 print('second key failed, trying third key and TSE: prefix.')
                 key = apiKey[2]
                 stock_info_url = f'http://www.alphavantage.co/query?function={function}&symbol=TSE:{symbol}&apikey={key}&outputsize={outputsize}'
                 json_df = pd.read_json(stock_info_url, orient='columns')
-            except:
+            except ValueError:
                 print(f'{symbol} is not a valid ticker. if stock is listed outside of US, preface ticker with exchange (ex:TSE:RY.)')
             return pd.DataFrame(data=None, columns=['open','high','low','close','adjusted close','volume','dividend amount','split coefficient'])
 
@@ -112,5 +112,4 @@ def daily_prices(symbol, provider='Alphavantage',outputsize='full', timer=True):
 
 
 if __name__ == "__main__":
-    conn = sqlite3.connect("Tracker.db")
-    cursor = conn.cursor()
+    print(daily_prices('TSE:GWO'))

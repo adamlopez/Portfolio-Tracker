@@ -1,8 +1,7 @@
-import time, datetime, xlwings as xw, pandas as pd, numpy as np
+import time, datetime, pandas as pd, numpy as np
 from datetime import date
 import sqlite3
 import sys
-import matplotlib.pyplot as plt
 import logging
 import price_query
 

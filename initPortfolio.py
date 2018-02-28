@@ -16,7 +16,9 @@ import portfolio
 import holding
 import fx
 
-
+import matplotlib
+matplotlib.use('Agg') # gets around not having tkinter available on AWS EC2
+import matplotlib.pyplot as plt
 
 def importPortfolio(DBname, import_prices=True):
     '''Initialize the protfolio on application startup.
